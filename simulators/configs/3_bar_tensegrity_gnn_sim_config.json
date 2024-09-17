@@ -1,0 +1,290 @@
+{
+  "gravity": [0.0, 0.0, -9.81],
+  "processor_shared_weights": false,
+  "n_out": 3,
+  "latent_dim": 256,
+  "nmessage_passing_steps": 4,
+  "nmlp_layers": 2,
+  "mlp_hidden_dim": 256,
+  "tensegrity_cfg": {
+    "name": "3bar",
+    "rods": [
+      {
+        "name": "rod_01",
+        "split_length": 1.0,
+        "end_pts": [
+          [
+            -1.6215121233622152, 0.0719064890787314,  0.1750014635983188
+          ],
+          [
+            0.9174537400186469, 0.41475098048689696, 2.1746539217518546
+          ]
+        ],
+        "linear_vel": [
+          0,
+          0,
+          0
+        ],
+        "ang_vel": [
+          0,
+          0,
+          0
+        ],
+        "radius": 0.016,
+        "sphere_radius": 0.175,
+        "sphere_mass": 10.5,
+        "motor_mass": 35.3,
+        "motor_radius": 0.175,
+        "motor_length": 0.45,
+        "motor_offset": 1.175,
+        "mass": 41.8,
+        "sites": [
+          "s_0",
+          "s_1"
+        ]
+      },
+      {
+        "name": "rod_23",
+        "split_length": 1.0,
+        "end_pts": [
+          [
+            -0.406447377015795, -1.8280484805779111,  0.8647490358404195
+          ],
+          [
+            0.06455094764350272, 1.3127966549062617, 0.17500098440341444
+          ]
+        ],
+        "linear_vel": [
+          0,
+          0,
+          0
+        ],
+        "ang_vel": [
+          0,
+          0,
+          0
+        ],
+        "radius": 0.016,
+        "sphere_radius": 0.175,
+        "sphere_mass": 10.5,
+        "motor_mass": 35.3,
+        "motor_radius": 0.175,
+        "motor_length": 0.45,
+        "motor_offset": 1.175,
+        "mass": 41.8,
+        "sites": [
+          "s_2",
+          "s_3"
+        ]
+      },
+      {
+        "name": "rod_45",
+        "split_length": 1.0,
+        "end_pts": [
+          [
+            -1.0385664446367775, -0.16959019853324886, 2.416572806282667
+          ],
+          [
+            1.2441857692285225, -0.7413509595886416, 0.17500372853580592
+          ]
+        ],
+        "linear_vel": [
+          0,
+          0,
+          0
+        ],
+        "ang_vel": [
+          0,
+          0,
+          0
+        ],
+        "radius": 0.016,
+        "sphere_radius": 0.175,
+        "sphere_mass": 10.5,
+        "motor_mass": 35.3,
+        "motor_radius": 0.175,
+        "motor_length": 0.45,
+        "motor_offset": 1.175,
+        "mass": 41.8,
+        "sites": [
+          "s_4",
+          "s_5"
+        ]
+      }
+    ],
+    "system_topology": {
+      "sites": {
+        "s_0": [-1.6215121233622152, 0.0719064890787314  , 0.1750014635983188],
+        "s_1": [0.9174537400186469 , 0.41475098048689696 , 2.1746539217518546],
+        "s_2": [-0.406447377015795 , -1.8280484805779111 , 0.8647490358404195],
+        "s_3": [0.06455094764350272, 1.3127966549062617  , 0.17500098440341444],
+        "s_4": [-1.0385664446367775, -0.16959019853324886, 2.416572806282667],
+        "s_5": [1.2441857692285225 ,-0.7413509595886416  , 0.17500372853580592]
+      },
+      "topology": {
+        "s_0": [
+          "rod01",
+          "cable_3",
+          "cable_4",
+          "cable_7"
+        ],
+        "s_1": [
+          "rod01",
+          "cable_1",
+          "cable_2",
+          "cable_8"
+        ],
+        "s_2": [
+          "rod23",
+          "cable_3",
+          "cable_5",
+          "cable_6"
+        ],
+        "s_3": [
+          "rod23",
+          "cable_0",
+          "cable_1",
+          "cable_7"
+        ],
+        "s_4": [
+          "rod45",
+          "cable_4",
+          "cable_5",
+          "cable_8"
+        ],
+        "s_5": [
+          "rod45",
+          "cable_0",
+          "cable_2",
+          "cable_6"
+        ]
+      }
+    },
+    "cables": [
+     {
+        "name": "cable_0",
+        "type": "actuated_cable",
+        "winch_r": 0.035,
+        "motor_speed": 0.8,
+        "stiffness": 100000,
+        "damping": 1000,
+        "rest_length": 2.7,
+        "init_act_length": 0.6,
+        "end_pts": [
+          "s_3",
+          "s_5"
+        ]
+      },
+      {
+        "name": "cable_1",
+        "type": "actuated_cable",
+        "winch_r": 0.035,
+        "motor_speed": 0.8,
+        "stiffness": 100000,
+        "damping": 1000,
+        "rest_length": 2.7,
+        "init_act_length": 0.6,
+        "end_pts": [
+          "s_1",
+          "s_3"
+        ]
+      },
+      {
+        "name": "cable_2",
+        "type": "actuated_cable",
+        "winch_r": 0.035,
+        "motor_speed": 0.8,
+        "stiffness": 100000,
+        "damping": 1000,
+        "rest_length": 2.7,
+        "init_act_length": 0.6,
+        "end_pts": [
+          "s_1",
+          "s_5"
+        ]
+      },
+      {
+        "name": "cable_3",
+        "type": "actuated_cable",
+        "winch_r": 0.035,
+        "motor_speed": 0.8,
+        "stiffness": 100000,
+        "damping": 1000,
+        "rest_length": 2.7,
+        "init_act_length": 0.6,
+        "end_pts": [
+          "s_0",
+          "s_2"
+        ]
+      },
+      {
+        "name": "cable_4",
+        "type": "actuated_cable",
+        "winch_r": 0.035,
+        "motor_speed": 0.8,
+        "stiffness": 100000,
+        "damping": 1000,
+        "rest_length": 2.7,
+        "init_act_length": 0.6,
+        "end_pts": [
+          "s_0",
+          "s_4"
+        ]
+      },
+      {
+        "name": "cable_5",
+        "type": "actuated_cable",
+        "winch_r": 0.035,
+        "motor_speed": 0.8,
+        "stiffness": 100000,
+        "damping": 1000,
+        "rest_length": 2.7,
+        "init_act_length": 0.6,
+        "end_pts": [
+          "s_2",
+          "s_4"
+        ]
+      },
+      {
+        "name": "cable_6",
+        "type": "cable",
+        "stiffness": 10000,
+        "damping": 1000,
+        "rest_length": 1.65,
+        "end_pts": [
+          "s_2",
+          "s_5"
+        ]
+      },
+      {
+        "name": "cable_7",
+        "type": "cable",
+        "stiffness": 10000,
+        "damping": 1000,
+        "rest_length": 1.65,
+        "end_pts": [
+          "s_0",
+          "s_3"
+        ]
+      },
+      {
+        "name": "cable_8",
+        "type": "cable",
+        "stiffness": 10000,
+        "damping": 1000,
+        "rest_length": 1.65,
+        "end_pts": [
+          "s_1",
+          "s_4"
+        ]
+      }
+    ]
+  },
+  "contact_params": {
+    "restitution": 0.0,
+    "baumgarte": 0.2,
+    "friction": 0.9210786094694333,
+    "friction_damping": 0.8,
+    "rolling_friction": 1.0
+  }
+}

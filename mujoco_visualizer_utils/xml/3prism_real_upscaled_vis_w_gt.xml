@@ -1,0 +1,388 @@
+<!--
+  ~ Copyright (c) 2020.  -  present.  Kun Wang. All Rights Reserved.
+  -->
+
+<mujoco model="TT (v1.31)">
+    <include file="./common/skybox.xml"/>
+    <include file="./common/visual.xml"/>
+    <include file="./common/materials.xml"/>
+    <compiler angle="degree" coordinate="global" inertiafromgeom="true" autolimits="true">
+        <lengthrange timestep="0.001"/>
+    </compiler>
+
+    <option timestep="0.001"
+            gravity="0 0 -9.81"
+            cone="elliptic"
+            solver="Newton"
+            integrator="Euler">
+        <flag sensornoise="disable"
+              frictionloss="disable"/>
+    </option>
+
+    <visual>
+        <global offwidth="1280" offheight="1280"/>
+    </visual>
+
+    <default>
+        <geom conaffinity="1" condim="6" contype="1" rgba="0.75 0.75 0.75 1" size="0.014" solref="-5000 -500"
+              density="1000" friction="1 0.005 0.0001"/>
+        <site type="sphere" size="0.02"/>
+        <tendon width="0.005" rgba="1 1 1 0.5" damping="1000" stiffness="10000"/>
+        <general ctrlrange="-100 0" dyntype="filter" gainprm="15000 0 0" biastype="none" dynprm="1 0 0" biasprm="0 0 0"/>
+    </default>
+
+    <asset>
+        <!--        <texture name="smallgrid" type="2d" builtin="checker" rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="50" height="50" mark="edge" markrgb=".2 .3 .4"/>-->
+        <!--        <material name="smallgrid" texture="smallgrid" texrepeat="40 40" texuniform="true" reflectance=".2"/>-->
+        <texture builtin="gradient" height="100" rgb1="1 1 1" rgb2="0 0 0" type="skybox"
+                 width="100"/>
+        <texture builtin="flat" height="1278" mark="cross" markrgb="1 1 1" name="texgeom"
+                 random="0.01" rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" type="cube" width="127"/>
+        <texture builtin="checker" height="100" name="texplane" rgb1="0 0 0" rgb2="0.8 0.8 0.8"
+                 type="2d" width="100"/>
+        <material name="MatPlane" reflectance="0." shininess="0.5" specular="0.5" texrepeat="30 30"
+                  texture="texplane"/>
+        <material name="geom" texture="texgeom" texuniform="true"/>
+    </asset>
+
+    <worldbody>
+
+        <!--        <light cutoff="100" diffuse="1 1 1" dir="-0 0 -1.3" directional="true" exponent="1"-->
+        <!--               pos="0 0 1.3" specular=".1 .1 .1"/>-->
+        <light name='mylight' pos="0 0 6"/>
+        <geom conaffinity="1" material="grid" name="floor" pos="0 0 0"
+              rgba="0.8 0.9 0.8 1" size="40 40 1" type="plane"/>
+        <!-- top 90 camera-->
+        <!--        <camera name="camera" pos="0 0 100" axisangle="0 0 1 0"/>-->
+<!--         top camera-->
+<!--                <camera name="camera" pos="0 -2 20" axisangle="1 0 0 10"/>-->
+        <!--         side camera-->
+        <camera name="camera1" pos="-0.010 -1.874 90.430" xyaxes="1.000 -0.006 0.000 0.006 1.000 0.021"/>
+        <camera name="camera" pos="-1.707 2.267 19.089" xyaxes="1.000 -0.009 -0.000 0.009 1.000 0.00"/>
+<!--        <camera name="camera" pos="2.404 -17.028 6.563" xyaxes="0.990 0.140 -0.000 -0.050 0.353 0.934"/>-->
+<!--        <camera name="camera" pos="-1.707 -9.267 38.018" xyaxes="0.994 -0.113 -0.000 0.111 0.970 0.218"/>         -->
+        <camera name="cw_19_camera" pos="5.362 2.793 14.484" xyaxes="1.000 -0.000 0.000 0.000 1.000 0.00"/>
+        <camera name="crawling_6_camera" pos="5.362 2.793 14.484" xyaxes="1.000 -0.000 0.000 0.000 1.000 0.00"/>
+
+<!--        <camera name="front" pos="4.386 -26.633 14.007" xyaxes="0.988 0.152 0.000 -0.063 0.408 0.911"/>-->
+<!--        <camera name="front" pos="6.600 -17.237 7.341" xyaxes="0.916 0.402 -0.000 -0.110 0.251 0.962"/>-->
+        <camera name="front" pos="3.738 -12.241 4.847" xyaxes="0.960 0.281 0.000 -0.076 0.259 0.963"/>
+        <camera name="front_far" pos="-7.221 -32.763 14.604" xyaxes="1.000 0.015 -0.000 -0.004 0.253 0.968"/>
+
+
+
+        <!-- ======= RODS ======= -->
+
+        <body name="r01">
+            <geom name="r01"
+                  fromto="-1.55304332  0.08632876  1.17474469  1.08484036 0.46879421 3.03425802"
+                  size="0.03"
+                  type="cylinder"
+                  mass="3.8"/>
+            <freejoint name="move4_5"/>
+            <geom name="s0"
+                  pos="-1.55304332  0.08632876  1.17474469"
+                  size="0.175"
+                  type="sphere"
+                  rgba="1 0 0 1"
+                  mass="10.5"/>
+            <geom name="s1"
+                  pos="1.08484036 0.46879421 3.03425802"
+                  size="0.175"
+                  type="sphere"
+                  rgba="1 0 0 1"
+                  mass="10.5"/>
+            <geom name="b0"
+                  fromto="-1.00517517  0.16576389  1.5609513 -1.37042061  0.11280713  1.30348022"
+                  size="0.175"
+                  type="cylinder"
+                  rgba="0 0 0 1"
+                  mass="35.3"/>
+            <geom name="b1"
+                  fromto="0.53697221 0.38935908 2.6480514  0.90221765 0.44231583 2.90552248"
+                  size="0.175"
+                  type="cylinder"
+                  rgba="0 0 0 1"
+                  mass="35.3"/>
+            <site name="s0"  pos="-1.55304332  0.08632876      1.17474469" rgba="0 0 1 1" size=".001"/>
+            <site name="s1"  pos="1.08484036   0.46879421      3.03425802" rgba="0 0 1 1" size=".001"/>
+        </body>
+
+        <body name="r23">
+            <geom name="r23"
+                  fromto="0.2599148  1.34654389 1.17489933 -0.550854   -1.66771965  2.08008949"
+                  size="0.03"
+                  type="cylinder"
+                  mass="3.8"/>
+            <freejoint name="move0_1"/>
+            <geom name="s2"
+                  pos="-0.550854   -1.66771965  2.08008949"
+                  size="0.175"
+                  type="sphere"
+                  mass="10.5"
+                  rgba="0 1 0 1"
+            />
+            <geom name="s3"
+                  pos="0.2599148  1.34654389 1.17489933"
+                  size="0.175"
+                  type="sphere"
+                  rgba="0 1 0 1"
+                  mass="10.5"/>
+            <geom name="b2"
+                  fromto="-0.38246356 -1.0416803   1.89208846  -0.49472386 -1.45903988  2.01742248"
+                  size="0.175"
+                  type="cylinder"
+                  rgba="0 0 0 1"
+                  mass="35.3"/>
+            <geom name="b3"
+                  fromto="0.09152436 0.72050454 1.36290037   0.20378466 1.13786411 1.23756634"
+                  size="0.175"
+                  type="cylinder"
+                  rgba="0 0 0 1"
+                  mass="35.3"/>
+
+            <site name="s2" pos="-0.550854   -1.66771965  2.08008949" rgba="0 1 0 1" size=".001"/>
+            <site name="s3" pos="0.2599148  1.34654389 1.17489933" rgba="0 1 0 1" size=".001"/>
+        </body>
+
+        <body name="r45">
+            <geom name="r45"
+                  fromto="-1.10041725  0.16742836  3.30294061   1.1975093  -0.70022171  1.17474492"
+                  size="0.03"
+                  type="cylinder"
+                  mass="3.8"/>
+            <freejoint name="move2_3"/>
+            <geom name="s4"
+                  pos="-1.10041725  0.16742836  3.30294061"
+                  size="0.175"
+                  type="sphere"
+                  rgba="0 0 1 1"
+                  mass="10.5"/>
+            <geom name="s5"
+                  pos="1.1975093  -0.70022171  1.17474492"
+                  size="0.175"
+                  type="sphere"
+                  rgba="0 0 1 1"
+                  mass="10.5"/>
+            <geom name="b4"
+                  fromto="-0.62315558 -0.01277588  2.86093073 -0.94133003  0.10736028  3.15560399"
+                  size="0.175"
+                  type="cylinder"
+                  rgba="0 0 0 1"
+                  mass="35.3"/>
+            <geom name="b5"
+                  fromto="0.72024763 -0.52001747  1.61675479   1.03842208 -0.64015363  1.32208154"
+                  size="0.175"
+                  type="cylinder"
+                  rgba="0 0 0 1"
+                  mass="35.3"/>
+            <site name="s4" pos="-1.10041725  0.16742836  3.30294061" rgba="1 0 0 1" size=".001"/>
+            <site name="s5" pos="1.1975093  -0.70022171  1.17474492" rgba="1 0 0 1" size=".001"/>
+        </body>
+
+        <body name="gt_r01">
+            <geom name="gt_r01"
+                  fromto="-1.55304332  0.08632876  1.17474469  1.08484036 0.46879421 3.03425802"
+                  size="0.03"
+                  type="cylinder"
+                  rgba="1 1 1 0.3"
+                  mass="3.8"/>
+            <freejoint name="gt_move4_5"/>
+            <geom name="gt_s0"
+                  pos="-1.55304332  0.08632876  1.17474469"
+                  size="0.175"
+                  type="sphere"
+                  rgba="1 0 0 0.3"
+                  mass="10.5"/>
+            <geom name="gt_s1"
+                  pos="1.08484036 0.46879421 3.03425802"
+                  size="0.175"
+                  type="sphere"
+                  rgba="1 0 0 0.3"
+                  mass="10.5"/>
+            <geom name="gt_b0"
+                  fromto="-1.00517517  0.16576389  1.5609513 -1.37042061  0.11280713  1.30348022"
+                  size="0.175"
+                  type="cylinder"
+                  rgba="0 0 0 0.3"
+                  mass="35.3"/>
+            <geom name="gt_b1"
+                  fromto="0.53697221 0.38935908 2.6480514  0.90221765 0.44231583 2.90552248"
+                  size="0.175"
+                  type="cylinder"
+                  rgba="0 0 0 0.3"
+                  mass="35.3"/>
+            <site name="gt_s0"  pos="-1.55304332  0.08632876      1.17474469" rgba="0 0 1 1" size=".001"/>
+            <site name="gt_s1"  pos="1.08484036   0.46879421      3.03425802" rgba="0 0 1 1" size=".001"/>
+        </body>
+
+        <body name="gt_r23">
+            <geom name="gt_r23"
+                  fromto="0.2599148  1.34654389 1.17489933 -0.550854   -1.66771965  2.08008949"
+                  size="0.03"
+                  type="cylinder"
+                  rgba="1 1 1 0.3"
+                  mass="3.8"/>
+            <freejoint name="gt_move0_1"/>
+            <geom name="gt_s2"
+                  pos="-0.550854   -1.66771965  2.08008949"
+                  size="0.175"
+                  type="sphere"
+                  mass="10.5"
+                  rgba="0 1 0 0.3"
+            />
+            <geom name="gt_s3"
+                  pos="0.2599148  1.34654389 1.17489933"
+                  size="0.175"
+                  type="sphere"
+                  rgba="0 1 0 0.3"
+                  mass="10.5"/>
+            <geom name="gt_b2"
+                  fromto="-0.38246356 -1.0416803   1.89208846  -0.49472386 -1.45903988  2.01742248"
+                  size="0.175"
+                  type="cylinder"
+                  rgba="0 0 0 0.3"
+                  mass="35.3"/>
+            <geom name="gt_b3"
+                  fromto="0.09152436 0.72050454 1.36290037   0.20378466 1.13786411 1.23756634"
+                  size="0.175"
+                  type="cylinder"
+                  rgba="0 0 0 0.3"
+                  mass="35.3"/>
+
+            <site name="gt_s2" pos="-0.550854   -1.66771965  2.08008949" rgba="0 1 0 1" size=".001"/>
+            <site name="gt_s3" pos="0.2599148  1.34654389 1.17489933" rgba="0 1 0 1" size=".001"/>
+        </body>
+
+        <body name="gt_r45">
+            <geom name="gt_r45"
+                  fromto="-1.10041725  0.16742836  3.30294061   1.1975093  -0.70022171  1.17474492"
+                  size="0.03"
+                  type="cylinder"
+                  rgba="1 1 1 0.3"
+                  mass="3.8"/>
+            <freejoint name="gt_move2_3"/>
+            <geom name="gt_s4"
+                  pos="-1.10041725  0.16742836  3.30294061"
+                  size="0.175"
+                  type="sphere"
+                  rgba="0 0 1 0.3"
+                  mass="10.5"/>
+            <geom name="gt_s5"
+                  pos="1.1975093  -0.70022171  1.17474492"
+                  size="0.175"
+                  type="sphere"
+                  rgba="0 0 1 0.3"
+                  mass="10.5"/>
+            <geom name="gt_b4"
+                  fromto="-0.62315558 -0.01277588  2.86093073 -0.94133003  0.10736028  3.15560399"
+                  size="0.175"
+                  type="cylinder"
+                  rgba="0 0 0 0.3"
+                  mass="35.3"/>
+            <geom name="gt_b5"
+                  fromto="0.72024763 -0.52001747  1.61675479   1.03842208 -0.64015363  1.32208154"
+                  size="0.175"
+                  type="cylinder"
+                  rgba="0 0 0 0.3"
+                  mass="35.3"/>
+            <site name="gt_s4" pos="-1.10041725  0.16742836  3.30294061" rgba="1 0 0 1" size=".001"/>
+            <site name="gt_s5" pos="1.1975093  -0.70022171  1.17474492" rgba="1 0 0 1" size=".001"/>
+
+
+        </body>
+
+    </worldbody>
+
+    <tendon>
+        <spatial name="td_0" springlength="1.7">
+            <site site="s3"/>
+            <site site="s5"/>
+        </spatial>
+        <spatial name="td_1" springlength="1.7">
+            <site site="s1"/>
+            <site site="s3"/>
+        </spatial>
+        <spatial name="td_2" springlength="1.7">
+            <site site="s1"/>
+            <site site="s5"/>
+        </spatial>
+        <spatial name="td_3" springlength="1.7">
+            <site site="s0"/>
+            <site site="s2"/>
+        </spatial>
+        <spatial name="td_4" springlength="1.7">
+            <site site="s0"/>
+            <site site="s4"/>
+        </spatial>
+        <spatial name="td_5" springlength="1.7">
+            <site site="s2"/>
+            <site site="s4"/>
+        </spatial>
+        <spatial name="td_6" springlength="1.47" stiffness="10000">
+            <site site="s2"/>
+            <site site="s5"/>
+        </spatial>
+        <spatial name="td_7" springlength="1.47" stiffness="10000">
+            <site site="s0"/>
+            <site site="s3"/>
+        </spatial>
+        <spatial name="td_8" springlength="1.47" stiffness="10000">
+            <site site="s1"/>
+            <site site="s4"/>
+        </spatial>
+        <spatial name="gt_td_0" springlength="1.7">
+            <site site="gt_s3"/>
+            <site site="gt_s5"/>
+        </spatial>
+        <spatial name="gt_td_1" springlength="1.7">
+            <site site="gt_s1"/>
+            <site site="gt_s3"/>
+        </spatial>
+        <spatial name="gt_td_2" springlength="1.7">
+            <site site="gt_s1"/>
+            <site site="gt_s5"/>
+        </spatial>
+        <spatial name="gt_td_3" springlength="1.7">
+            <site site="gt_s0"/>
+            <site site="gt_s2"/>
+        </spatial>
+        <spatial name="gt_td_4" springlength="1.7">
+            <site site="gt_s0"/>
+            <site site="gt_s4"/>
+        </spatial>
+        <spatial name="gt_td_5" springlength="1.7">
+            <site site="gt_s2"/>
+            <site site="gt_s4"/>
+        </spatial>
+        <spatial name="gt_td_6" springlength="1.47" stiffness="10000">
+            <site site="gt_s2"/>
+            <site site="gt_s5"/>
+        </spatial>
+        <spatial name="gt_td_7" springlength="1.47" stiffness="10000">
+            <site site="gt_s0"/>
+            <site site="gt_s3"/>
+        </spatial>
+        <spatial name="gt_td_8" springlength="1.47" stiffness="10000">
+            <site site="gt_s1"/>
+            <site site="gt_s4"/>
+        </spatial>
+    </tendon>
+
+    <actuator>
+        <general name='act_0' tendon="td_0"/>
+        <general name='act_1' tendon="td_1"/>
+        <general name='act_2' tendon="td_2"/>
+        <general name='act_3' tendon="td_3"/>
+        <general name='act_4' tendon="td_4"/>
+        <general name='act_5' tendon="td_5"/>
+        <!--        <general name='act_6' tendon="td_6"/>-->
+        <!--        <general name='act_7' tendon="td_7"/>-->
+        <!--        <general name='act_8' tendon="td_8"/>-->
+    </actuator>
+    <!--    <actuator>-->
+    <!--        <general name="f0" gear="0 0 10 0 0 0" joint="move0_1"/>-->
+    <!--        <general name="f1" gear="0 0 10 0 0 0" joint="move2_3"/>-->
+    <!--        <general name="f2" gear="0 0 10 0 0 0" joint="move4_5"/>-->
+    <!--    </actuator>-->
+</mujoco>
