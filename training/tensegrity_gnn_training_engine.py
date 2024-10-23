@@ -757,10 +757,10 @@ class TensegrityGNNTrainingEngine(BaseStateObject):
 
         try:
             with loss_file.open('a') as fp:
-                fp.write(loss_msg)
+                fp.write(loss_msg + "\n")
         except:
             with loss_file.open('w') as fp:
-                fp.write(loss_msg)
+                fp.write(loss_msg + "\n")
 
         print(loss_msg)
 

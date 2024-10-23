@@ -402,25 +402,3 @@ def get_detector(body1, body2):
 
     shapes = sorted([shape1.lower(), shape2.lower()])
     return detector_dict["_".join(shapes)]
-
-
-if __name__ == '__main__':
-    # pos = torch.tensor([[1, 3, 5.0], [5, 4, 5.4]], dtype=torch.float64)
-    # pos = torch.tensor([[1, 3, 5.0], [5, 4, 5.4]], dtype=torch.float64)
-    rod1_end_pt1 = torch.tensor([0.0000, 2.0000, 3.5000], dtype=torch.float64)
-    rod1_end_pt2 = torch.tensor([11.0000, 11.0000, 3.600], dtype=torch.float64)
-    rod2_end_pt1 = torch.tensor([2.0000, 0.0000, 1.4000], dtype=torch.float64)
-    rod2_end_pt2 = torch.tensor([11.0000, 13.0000, 1.900], dtype=torch.float64)
-
-    end_pts1 = torch.zeros((1, 3, 2), dtype=torch.float64)
-    end_pts1[0, :, 0] = rod1_end_pt1
-    end_pts1[0, :, 1] = rod1_end_pt2
-
-    end_pts2 = torch.zeros((1, 3, 2), dtype=torch.float64)
-    end_pts2[0, :, 0] = rod2_end_pt1
-    end_pts2[0, :, 1] = rod2_end_pt2
-
-    # princ_axes = torch.tensor([[3, 4, 3], [-3, -4, 5]], dtype=torch.float64)
-    # print(pos + princ_axes)
-    # print(pos - princ_axes)
-    # print(cylinder_cylinder(end_pts1, 1, end_pts2, 1))

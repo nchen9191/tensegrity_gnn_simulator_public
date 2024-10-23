@@ -10,25 +10,25 @@
     "weight_decay": 0.01
   },
   "train_data_paths": [
-    "data_sets/tensegrity_mujoco_data/train/rolling_1/",
-    "data_sets/tensegrity_mujoco_data/train/rolling_2/",
-    "data_sets/tensegrity_mujoco_data/train/rolling_5/",
-    "data_sets/tensegrity_mujoco_data/train/rolling_11/",
-    "data_sets/tensegrity_mujoco_data/train/cw_20/",
-    "data_sets/tensegrity_mujoco_data/train/ccw_1/",
-    "data_sets/tensegrity_mujoco_data/train/ccw_3/",
-    "data_sets/tensegrity_mujoco_data/train/crawling_2/",
-    "data_sets/tensegrity_mujoco_data/train/crawling_3/",
-    "data_sets/tensegrity_mujoco_data/train/crawling_5/",
-    "data_sets/tensegrity_mujoco_data/train/expansion_1/"
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/train/R2S2Rrolling_1/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/train/R2S2Rrolling_2/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/train/R2S2Rrolling_5/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/train/R2S2Rrolling_11/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/train/R2S2Rcw_20/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/train/R2S2Rccw_1/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/train/R2S2Rccw_3/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/train/R2S2Rcrawling_2/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/train/R2S2Rcrawling_3/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/train/R2S2Rcrawling_5/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/train/R2S2Rexpansion_1/"
   ],
   "val_data_paths": [
-    "data_sets/tensegrity_mujoco_data/val/ccw_2/",
-    "data_sets/tensegrity_mujoco_data/val/cw_19/",
-    "data_sets/tensegrity_mujoco_data/val/crawling_6/",
-    "data_sets/tensegrity_mujoco_data/val/rolling_7/"
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/val/R2S2Rccw_2/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/val/R2S2Rcw_19/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/val/R2S2Rcrawling_6/",
+    "../../tensegrity/data_sets/tensegrity_real_datasets/synthetic/mjc_synthetic_5d_0.01/val/R2S2Rrolling_7/"
   ],
-  "output_path": "models/gnn_3_bar/",
   "load_sim": false,
-  "load_sim_path": "models/gnn_3_bar/best_loss_model.pt"
+  "load_sim_path": "../../tensegrity/data_sets/tensegrity_real_datasets/mjc_syn_models/public_test/best_loss_model.pt",
+  "output_path": "../../tensegrity/data_sets/tensegrity_real_datasets/mjc_syn_models/public_test/"
 }

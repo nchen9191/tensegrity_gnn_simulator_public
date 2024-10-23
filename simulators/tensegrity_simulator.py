@@ -2,19 +2,23 @@ from typing import Dict, Tuple, Union, Optional
 
 import torch
 
-from contact.collision_detector import get_detector
-from contact.collision_response import CollisionResponseGenerator
+from linear_contact.collision_detector import get_detector
+from linear_contact.collision_response import CollisionResponseGenerator
 from robots.tensegrity import TensegrityRobot
 from simulators.abstract_simulator import AbstractSimulator
+from state_objects.cables import Cable, Spring
 from utilities import torch_quaternion
 
 
 class TensegrityRobotSimulator(AbstractSimulator):
+    """
+    Differentiable first-principle simulator for tensegrity robots
+    """
 
     def __init__(self,
-                 tensegrity_cfg,
-                 gravity,
-                 contact_params):
+                 tensegrity_cfg: dict,
+                 gravity: torch.Tensor,
+                 contact_params: Dict[str, torch.Tensor]):
         super().__init__()
         self.robot = self.build_robot(tensegrity_cfg)
         self.gravity = gravity
@@ -37,7 +41,7 @@ class TensegrityRobotSimulator(AbstractSimulator):
         if self.collision_resp_gen:
             self.collision_resp_gen.to(device)
 
-        #for k, pid in self.pids.items():
+        # for k, pid in self.pids.items():
         #    self.pids[k] = pid.to(device)
 
         return self
@@ -46,7 +50,12 @@ class TensegrityRobotSimulator(AbstractSimulator):
     def rigid_bodies(self):
         return self.robot.rods
 
-    def get_body_vecs(self, curr_state, acting_pts):
+    def get_body_vecs(self,
+                      curr_state: torch.Tensor,
+                      acting_pts: torch.Tensor):
+        """
+        see parent
+        """
         num_bodies = len(self.robot.rods)
         pos = torch.hstack([curr_state[:, i * 13: i * 13 + 3]
                             for i in range(num_bodies)])
@@ -58,6 +67,9 @@ class TensegrityRobotSimulator(AbstractSimulator):
                        external_forces: torch.Tensor,
                        external_pts: torch.Tensor
                        ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor]]:
+        """
+        see parent
+        """
         net_spring_forces, spring_forces, acting_pts \
             = self.robot.compute_cable_forces()
         gravity_forces = torch.hstack([rod.mass * self.gravity
@@ -70,6 +82,9 @@ class TensegrityRobotSimulator(AbstractSimulator):
                         forces: torch.Tensor,
                         body_vecs: torch.Tensor
                         ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+        """
+        see parent
+        """
         shape = forces.shape
         torques = torch.cross(
             body_vecs.view(-1, 3, shape[2]),
@@ -85,6 +100,9 @@ class TensegrityRobotSimulator(AbstractSimulator):
                               net_force: torch.Tensor,
                               net_torque: torch.Tensor
                               ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        see parent
+        """
         batch_size = net_force.shape[0]
 
         rods = self.robot.rods.values()
@@ -106,6 +124,9 @@ class TensegrityRobotSimulator(AbstractSimulator):
                          lin_acc: torch.Tensor,
                          ang_acc: torch.Tensor,
                          dt: float) -> torch.Tensor:
+        """
+        see parent
+        """
         curr_state = self.get_curr_state().reshape(-1, 13, 1)
         pos, quat = curr_state[:, :3], curr_state[:, 3:7]
         lin_vel, ang_vel = curr_state[:, 7:10], curr_state[:, 10:]
@@ -127,6 +148,9 @@ class TensegrityRobotSimulator(AbstractSimulator):
         return next_state
 
     def get_curr_state(self) -> torch.Tensor:
+        """
+        see parent
+        """
         return torch.hstack([
             torch.hstack([
                 rod.pos,
@@ -138,6 +162,9 @@ class TensegrityRobotSimulator(AbstractSimulator):
         ])
 
     def update_state(self, next_state: torch.Tensor) -> None:
+        """
+        see parent
+        """
         next_state_ = next_state.reshape(-1, 13, 1)
         pos, quat = next_state_[:, :3], next_state_[:, 3:7]
         lin_vel, ang_vel = next_state_[:, 7:10], next_state_[:, 10:]
@@ -153,6 +180,9 @@ class TensegrityRobotSimulator(AbstractSimulator):
                                pre_next_state: torch.Tensor,
                                dt: Union[torch.Tensor, float]
                                ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        see parent
+        """
         delta_v, delta_w, toi = [], [], []
         for i, rod in enumerate(self.robot.rods.values()):
             rod_pre_next_state = pre_next_state[:, i * 13: (i + 1) * 13]
@@ -177,6 +207,9 @@ class TensegrityRobotSimulator(AbstractSimulator):
                          delta_v,
                          delta_w,
                          toi) -> torch.Tensor:
+        """
+        see parent
+        """
         rods = self.robot.rods.values()
         n = len(rods)
         pre_next_state_ = torch.vstack([pre_next_state[:, i * 13: (i + 1) * 13] for i in range(n)])
@@ -202,7 +235,13 @@ class TensegrityRobotSimulator(AbstractSimulator):
 
         return next_state
 
-    def _compute_cable_length(self, cable):
+    def _compute_cable_length(self, cable: Spring):
+        """
+        Computes the current length of spring/cable
+
+        @param cable: spring object
+        @return:
+        """
         sites_dict = self.robot.system_topology.sites_dict
         end_pt0 = sites_dict[cable.end_pts[0]]
         end_pt1 = sites_dict[cable.end_pts[1]]
@@ -213,11 +252,16 @@ class TensegrityRobotSimulator(AbstractSimulator):
 
         return length, x_dir
 
-    def apply_control(self, control_signals, dt):
+    def apply_control(self,
+                      control_signals: Union[Dict, torch.Tensor],
+                      dt: Union[torch.Tensor, float]):
+        """
+        see parent
+        """
         if isinstance(control_signals, torch.Tensor):
             control_signals = {
                 f'cable_{i}': control_signals[:, i: i + 1, None]
-                               for i in range(control_signals.shape[1])
+                for i in range(control_signals.shape[1])
             }
         elif isinstance(control_signals, list):
             control_signals = {
@@ -249,6 +293,15 @@ class TensegrityRobotSimulator(AbstractSimulator):
                               external_forces: Dict = None,
                               external_pts: Dict = None,
                               target_gait_dict: Dict = None):
+        """
+        Run
+        @param curr_state:
+        @param dt:
+        @param external_forces:
+        @param external_pts:
+        @param target_gait_dict:
+        @return:
+        """
         if external_forces is None or external_pts is None:
             ext_f_dim = len(self.robot.rods) * 3
             size = (curr_state.shape[0], ext_f_dim, 1)
@@ -289,34 +342,6 @@ class TensegrityRobotSimulator(AbstractSimulator):
                                   external_pts)
 
         return next_state, controls
-
-    def run_until_stable(self, dt, tol=2e-2, max_time=10):
-        with torch.no_grad():
-            time = 0.0
-            curr_state = self.get_curr_state()
-            num_bodies = len(self.robot.rods)
-            vels = torch.ones(num_bodies * 3, dtype=self.dtype)
-
-            while (torch.abs(vels) > tol).any():
-                if time > max_time:
-                    raise Exception('Stability could not be reached within 5 seconds')
-
-                curr_state = self.step(curr_state, dt)
-                # print(curr_state.flatten())
-
-                time += dt
-                vels = torch.hstack([
-                    curr_state[:, i * 13 + 7: i * 13 + 10]
-                    for i in range(num_bodies)
-                ])
-
-                # print(time, torch.abs(vels).max())
-
-            self.update_state(curr_state)
-
-        print("Stabilization complete")
-
-        return curr_state
 
     def reset_pids(self):
         for k, pid in self.pids.items():

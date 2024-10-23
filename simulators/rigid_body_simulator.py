@@ -2,8 +2,8 @@ from typing import Tuple, Union, Dict
 
 import torch
 
-from contact.collision_detector import get_detector
-from contact.collision_response import CollisionResponseGenerator
+from linear_contact.collision_detector import get_detector
+from linear_contact.collision_response import CollisionResponseGenerator
 from simulators.abstract_simulator import AbstractSimulator
 from state_objects.rigid_object import RigidBody
 from utilities import torch_quaternion
@@ -98,14 +98,21 @@ class RigidBodySimulator(AbstractSimulator):
         return next_state
 
     def compute_contact_deltas(self,
-                               pre_next_state: torch.Tensor,
+                               pre_contact_state: torch.Tensor,
                                dt: Union[torch.Tensor, float]
                                ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Method ot commpute velocity corrections due to contact event
+
+        @param pre_contact_state: next state if no contact considered
+        @param dt: timestep size
+        @return: linear vel correction, ang vel correction, time of impact
+        """
         detector = get_detector(self.rigid_body, self.collision_resp_gen.ground)
         _, _, delta_v, delta_w, toi = (
             self.collision_resp_gen.resolve_contact_ground(
                 self.rigid_body,
-                pre_next_state,
+                pre_contact_state,
                 dt,
                 detector)
         )
@@ -113,13 +120,23 @@ class RigidBodySimulator(AbstractSimulator):
         return delta_v, delta_w, toi
 
     def resolve_contacts(self,
-                         pre_next_state: torch.Tensor,
+                         pre_contact_state: torch.Tensor,
                          dt: Union[torch.Tensor, float],
                          delta_v,
                          delta_w,
                          toi) -> torch.Tensor:
-        lin_vel = pre_next_state[:, 7:10, ...] + delta_v
-        ang_vel = pre_next_state[:, 10:, ...] + delta_w
+        """
+        Method to use velocity corrections from contact to compute next state
+
+        @param pre_contact_state: next state if no contact considered
+        @param dt: timestep size
+        @param delta_v: linear vel correction
+        @param delta_w: ang vel correction
+        @param toi: time of impact
+        @return: next state
+        """
+        lin_vel = pre_contact_state[:, 7:10, ...] + delta_v
+        ang_vel = pre_contact_state[:, 10:, ...] + delta_w
         pos = self.rigid_body.pos + dt * lin_vel - delta_v * toi
 
         quat = torch_quaternion.update_quat(self.rigid_body.quat, ang_vel, dt)

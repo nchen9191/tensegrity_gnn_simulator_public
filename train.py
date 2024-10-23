@@ -36,8 +36,8 @@ def train():
         trainer.run(e)
 
         output_dir = Path(config_file['output_path'])
-        shutil.copy(output_dir / "best_loss_model.pt", output_dir / f"{n}_steps_best_loss_model.pt")
         try:
+            shutil.copy(output_dir / "best_loss_model.pt", output_dir / f"{n}_steps_best_loss_model.pt")
             shutil.copy(output_dir / "best_rollout_model.pt", output_dir / f"{n}_steps_best_rollout_model.pt")
         except:
             print("No best_rollout_model")

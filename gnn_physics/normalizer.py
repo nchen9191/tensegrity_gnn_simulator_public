@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch
 
 from state_objects.base_state_object import BaseStateObject
@@ -6,10 +8,18 @@ from state_objects.base_state_object import BaseStateObject
 class AccumulatedNormalizer(BaseStateObject):
 
     def __init__(self,
-                 shape,
-                 max_acc_steps=2000,
-                 dtype=torch.float64,
-                 name='unknown'):
+                 shape: Tuple,
+                 max_acc_steps: int = 2000,
+                 dtype: torch.dtype = torch.float64,
+                 name: str = 'unknown'):
+        """
+        Normalizer that accumulates during first epoch to compute mean and std of features
+
+        @param shape: shape of feature
+        @param max_acc_steps: max number of accumulation steps
+        @param dtype: data type for torch tensors
+        @param name: feature name
+        """
         super().__init__('normalizer')
         zeros = torch.zeros(shape, dtype=dtype, device=self.device)
 
@@ -24,24 +34,18 @@ class AccumulatedNormalizer(BaseStateObject):
 
         self._std_epsilon = zeros + 1e-3
 
-    @classmethod
-    def static_mode(cls, shape, mean=0.0, std=1.0):
-        normalizer = cls(shape)
-        normalizer._num_accumulations = normalizer._max_acc_steps
-        normalizer._acc_count = 1
-        normalizer._acc_sum += mean
-        normalizer._acc_sum_squared += std ** 2 + mean ** 2
-
-        return normalizer
-
     def start_accum(self):
         self.start_accum_flag = True
 
     def stop_accum(self):
         self.start_accum_flag = False
 
-    def __call__(self, batched_data):
-        """Direct transformation of the normalizer."""
+    def __call__(self, batched_data: torch.Tensor) -> torch.Tensor:
+        """
+        normal function
+        @param batched_data:
+        @return:
+        """
         if self.start_accum_flag and self._num_accumulations < self._max_acc_steps:
             self._num_accumulations += 1
             self._acc_count += batched_data.shape[0]
@@ -60,16 +64,12 @@ class AccumulatedNormalizer(BaseStateObject):
 
         return self
 
-    def inverse(self, normalized_batch_data):
+    def inverse(self, normalized_batch_data: torch.Tensor) -> torch.Tensor:
         """Inverse transformation of the normalizer."""
         return normalized_batch_data * self.std_w_eps + self.mean
 
-    def inverse_no_mean(self, normalized_batch_data):
+    def inverse_no_mean(self, normalized_batch_data: torch.Tensor) -> torch.Tensor:
         return normalized_batch_data * self.std_w_eps
-
-    def _safe_max(self, var):
-        zero = torch.zeros(var.shape, device=var.device, dtype=var.dtype)
-        return torch.maximum(var, zero)
 
     @property
     def _safe_count(self):
@@ -83,7 +83,7 @@ class AccumulatedNormalizer(BaseStateObject):
     @property
     def std(self):
         var = self._acc_sum_squared / self._safe_count - self.mean ** 2
-        var = self._safe_max(var)
+        var = torch.clamp_min(var, 0.)
         return torch.sqrt(var)
 
     @property

@@ -15,6 +15,9 @@ from utilities.tensor_utils import zeros
 
 
 class LearnedSimulator(BaseStateObject):
+    """
+    Parent simulator that includes a GNN model
+    """
 
     def __init__(
             self,
@@ -31,7 +34,7 @@ class LearnedSimulator(BaseStateObject):
 
         self.data_processor = data_processor
 
-        # Initialize the EncodeProcessDecode
+        # Initialize the EncodeProcessDecode GNN
         self._encode_process_decode = EncodeProcessDecode(
             node_types=node_types,
             edge_types=edge_types,
@@ -59,6 +62,21 @@ class LearnedSimulator(BaseStateObject):
         graph = self._encode_process_decode(graph)
         return graph
 
+    def update_state(self, next_state: torch.Tensor) -> None:
+        """
+        Update state and other internal attribute from state
+        """
+        if len(next_state.shape) == 1:
+            next_state = next_state.unsqueeze(0)
+
+        next_state = next_state.reshape(-1, next_state.shape[1], 1)
+        pos = next_state[:, :3]
+        quat = next_state[:, 3:7]
+        linear_vel = next_state[:, 7:10]
+        ang_vel = next_state[:, 10:]
+
+        self.rigid_body.update_state(pos, linear_vel, quat, ang_vel)
+
     def step(self, graph):
         return self(graph)
 
@@ -67,6 +85,9 @@ class LearnedSimulator(BaseStateObject):
 
 
 class TensegrityGNNSimulator(LearnedSimulator):
+    """
+    Tensegrity with only GNN
+    """
 
     def __init__(self,
                  n_out: int,
@@ -105,6 +126,13 @@ class TensegrityGNNSimulator(LearnedSimulator):
             self._encode_process_decode = self._encode_process_decode.double()
 
     def process_gnn(self, state):
+        """
+        Method to build and process graph from a state
+
+        @param state: SE(3) state
+
+        @return: processed graph
+        """
         states = [state]
         if self.prev_states:
             states += self.prev_states
@@ -120,7 +148,7 @@ class TensegrityGNNSimulator(LearnedSimulator):
         return graph
 
     def step(self, state, dt, ctrls=None):
-        self.robot.update_state(state)
+        self.update_state(state)
         self.apply_controls(ctrls)
 
         graph = self.process_gnn(state)
@@ -136,6 +164,9 @@ class TensegrityGNNSimulator(LearnedSimulator):
 
 
 class TensegrityHybridGNNSimulator(Tensegrity5dRobotSimulator):
+    """
+    Hybrid simulator for first-principle models for passive forces + GNN
+    """
 
     def __init__(self,
                  tensegrity_cfg,
@@ -151,6 +182,8 @@ class TensegrityHybridGNNSimulator(Tensegrity5dRobotSimulator):
         super().__init__(tensegrity_cfg,
                          gravity,
                          contact_params)
+
+        # initialize GNN simulator within
         self.gnn_sim = TensegrityGNNSimulator(
             n_out,
             latent_dim,
@@ -176,37 +209,57 @@ class TensegrityHybridGNNSimulator(Tensegrity5dRobotSimulator):
         return self.gnn_sim.data_processor
 
     def compute_contact_deltas(self,
-                               pre_next_state: torch.Tensor,
+                               pre_contact_state: torch.Tensor,
                                dt: Union[torch.Tensor, float]
                                ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        pre_next_state_ = pre_next_state.reshape(-1, 13, 1)
+        """
+        Return all zeros here since we are going to use GNN to resolve contact
+
+        @param pre_contact_state: next state if contact not considered
+        @param dt: timestep size
+        @return: linear vel correction, ang vel correction, time of impact
+        """
+        pre_next_state_ = pre_contact_state.reshape(-1, 13, 1)
 
         delta_v = zeros((pre_next_state_.shape[0], 3, 1),
-                        ref_tensor=pre_next_state)
+                        ref_tensor=pre_contact_state)
         delta_w = zeros((pre_next_state_.shape[0], 3, 1),
-                        ref_tensor=pre_next_state)
+                        ref_tensor=pre_contact_state)
         toi = zeros((pre_next_state_.shape[0], 1, 1),
-                    ref_tensor=pre_next_state)
+                    ref_tensor=pre_contact_state)
 
         return delta_v, delta_w, toi
 
     def resolve_contacts(self,
-                         pre_next_state: torch.Tensor,
+                         pre_contact_state: torch.Tensor,
                          dt: Union[torch.Tensor, float],
-                         delta_v,
-                         delta_w,
+                         delta_v: torch.Tensor,
+                         delta_w: torch.Tensor,
                          toi) -> Tuple[torch.Tensor, Graph]:
+        """
+        Method where GNN is used to predict velocity corrections using GNN
+
+        @param pre_contact_state: next state if contact not considered
+        @param dt: timestep size
+        @param delta_v: does not use
+        @param delta_w: does not use
+        @param toi: does not use
+        @return: next state
+        """
+        # Create and run forward pass with GNN
         curr_state = self.get_curr_state()
         graph = self.gnn_sim.process_gnn(curr_state)
 
+        # Compute next poses using (dv, dw) from analytical passive force modules
         curr_state_ = curr_state.reshape(-1, 13, 1)
-        pre_next_state_ = pre_next_state.reshape(-1, 13, 1)
+        pre_next_state_ = pre_contact_state.reshape(-1, 13, 1)
         dv = pre_next_state_[:, 7:10] - curr_state_[:, 7:10]
         dw = pre_next_state_[:, 10:] - curr_state_[:, 10:]
         pos = curr_state_[:, :3] + dt * dv
         quat = torch_quaternion.update_quat(curr_state_[:, 3:7], dw, dt)
 
-        pf_node_pos = self.gnn_sim.data_processor.pose2node(
+        # Compute new node poses and node dv from passive forces
+        pf_node_pos = self.data_processor.pose2node(
             torch.hstack([pos, quat])
         )
         body_mask = graph.body_mask.flatten()
@@ -214,10 +267,12 @@ class TensegrityHybridGNNSimulator(Tensegrity5dRobotSimulator):
         pf_dv[body_mask] = (pf_node_pos - graph.node_pos[body_mask]
                             ) / dt.squeeze(-1)
 
+        # Update node state
         graph['pf_dv'] = pf_dv
         graph['p_node_vel'] = graph.p_node_vel + pf_dv
         graph['p_node_pos'] = graph.p_node_pos + pf_dv * dt.squeeze(-1)
 
+        # Compute next SE(3) state from curr and next node positions
         next_state = self.data_processor.node2pose(
             graph.p_node_pos[body_mask],
             graph.node_pos[body_mask],

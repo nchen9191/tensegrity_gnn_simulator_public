@@ -1,18 +1,23 @@
 from collections import OrderedDict
+from typing import Dict, Union, Tuple
 
 import torch
 
 from state_objects.base_state_object import BaseStateObject
-from state_objects.cables import get_cable, ActuatedCable
+from state_objects.cables import get_cable, ActuatedCable, Cable
 from state_objects.system_topology import SystemTopology
 from state_objects.tensegrity_rods import TensegrityRod
-from utilities import torch_quaternion
 from utilities.tensor_utils import zeros
 
 
 class TensegrityRobot(BaseStateObject):
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: Dict):
+        """
+        Tensegrity robot class
+
+        @param cfg: config dict
+        """
         super().__init__(cfg['name'])
         topology_dict = cfg['system_topology']
         self.system_topology = SystemTopology.init_to_torch(
@@ -22,11 +27,13 @@ class TensegrityRobot(BaseStateObject):
         self.rods = self._init_rods(cfg)
         self.cables = self._init_cables(cfg)
 
+        # Concat of state vars
         self.pos = torch.hstack([rod.pos for rod in self.rods.values()])
         self.linear_vel = torch.hstack([rod.linear_vel for rod in self.rods.values()])
         self.quat = torch.hstack([rod.quat for rod in self.rods.values()])
         self.ang_vel = torch.hstack([rod.ang_vel for rod in self.rods.values()])
 
+        # Split cables to actuated and non-actuated
         self.actuated_cables, self.non_actuated_cables = {}, {}
         for k, cable in self.cables.items():
             if isinstance(cable, ActuatedCable):
@@ -34,6 +41,7 @@ class TensegrityRobot(BaseStateObject):
             else:
                 self.non_actuated_cables[k] = cable
 
+        # Pre-computed cable consts used to compute forces
         self.k_mat, self.c_mat, self.cable2rod_idxs, self.rod_end_pts \
             = self.build_cable_consts()
 
@@ -43,13 +51,16 @@ class TensegrityRobot(BaseStateObject):
             else {s.name: s.name for s in self.actuated_cables.values()}
 
     def _init_sites(self):
+        """
+        Initialize rod sites from system topology
+        """
         for rod in self.rods.values():
             for site in rod.sites:
                 world_frame_pos = self.system_topology.sites_dict[site].reshape(-1, 3, 1)
                 body_frame_pos = rod.world_to_body_coords(world_frame_pos)
                 rod.update_sites(site, body_frame_pos)
 
-    def to(self, device):
+    def to(self, device: Union[str, torch.device]):
         self.system_topology.to(device)
         for k, rod in self.rods.items():
             rod.to(device)
@@ -63,11 +74,20 @@ class TensegrityRobot(BaseStateObject):
         return self
 
     def update_state(self, pos, lin_vel, quat, ang_vel):
+        """
+        Method to update state and compute any other kinematic
+
+        @param pos: center of mass positions of all rods
+        @param lin_vel: linear vel of com of all rods
+        @param quat: quaternion of all rods
+        @param ang_vel: angular vel of all rods
+        """
         self.pos = pos
         self.linear_vel = lin_vel
         self.quat = quat
         self.ang_vel = ang_vel
 
+        # Up each rod
         for i, rod in enumerate(self.rods.values()):
             rod.update_state(
                 pos[:, i * 3: (i + 1) * 3],
@@ -75,15 +95,24 @@ class TensegrityRobot(BaseStateObject):
                 quat[:, i * 4: (i + 1) * 4],
                 ang_vel[:, i * 3: (i + 1) * 3],
             )
+
         self.update_system_topology()
 
     def update_system_topology(self):
+        """
+        Update site positions in sys topology object after updating rod states
+        """
         for rod in self.rods.values():
             for site, rel_pos in rod.sites.items():
                 world_pos = rod.body_to_world_coords(rel_pos)
                 self.system_topology.update_site(site, world_pos)
 
-    def _init_rods(self, config):
+    def _init_rods(self, config: dict) -> Dict[str, TensegrityRod]:
+        """
+        Instantiate rod objects
+        @param config: config containing rod configs
+        @return: dictionary of rod name to rod object
+        """
         rods = OrderedDict()
         for rod_config in config['rods']:
             rod_state = TensegrityRod.init_from_cfg(rod_config)
@@ -91,7 +120,12 @@ class TensegrityRobot(BaseStateObject):
 
         return rods
 
-    def _init_cables(self, config):
+    def _init_cables(self, config: dict) -> Dict[str, Cable]:
+        """
+        Instantiate cable objects
+        @param config: config containing cable configs
+        @return: dictionary of cable name to cable object
+        """
         cables = OrderedDict()
         for cable_config in config['cables']:
             cable_cls = get_cable(cable_config['type'])
@@ -104,7 +138,7 @@ class TensegrityRobot(BaseStateObject):
 
         return cables
 
-    def _find_rod_idxs(self, cable):
+    def _find_rod_idxs(self, cable: Cable) -> Tuple[int, int]:
         end_pt0, end_pt1 = cable.end_pts
         rod_idx0, rod_idx1 = None, None
 
@@ -116,7 +150,12 @@ class TensegrityRobot(BaseStateObject):
 
         return rod_idx0, rod_idx1
 
-    def build_cable_consts(self):
+    def build_cable_consts(self) \
+            -> Tuple[torch.Tensor, torch.Tensor, Tuple[list, list], dict]:
+        """
+        Precompute constants used to compute cable forces and torques analytically
+        @return:
+        """
         k_mat = torch.zeros((1, len(self.rods), len(self.cables)),
                             dtype=self.dtype)
         c_mat = torch.zeros((1, len(self.rods), len(self.cables)),
@@ -227,7 +266,7 @@ class TensegrityRobot(BaseStateObject):
 
         return net_rod_forces, rod_forces, act_pts
 
-    def compute_cable_length(self, cable):
+    def compute_cable_length(self, cable: Cablee):
         end_pt0 = self.system_topology.sites_dict[cable.end_pts[0]]
         end_pt1 = self.system_topology.sites_dict[cable.end_pts[1]]
 
@@ -240,7 +279,7 @@ class TensegrityRobot(BaseStateObject):
 
 class TensegrityRobotGNN(TensegrityRobot):
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: dict):
         super().__init__(cfg)
         self._inv_mass = None
         self._inv_inertia = None

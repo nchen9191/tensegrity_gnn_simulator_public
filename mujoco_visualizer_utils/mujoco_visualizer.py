@@ -1,14 +1,22 @@
 import json
 from pathlib import Path
+from typing import Dict
 
 import cv2
 import mujoco
+import numpy
+import numpy as np
 import tqdm
 
 
 class MuJoCoVisualizer:
 
     def __init__(self, render_fps: int = 30, render_size: (int, int) = (1280, 1280)):
+        """
+
+        @param render_fps:
+        @param render_size:
+        """
         self.mjc_model = None
         self.mjc_data = None
         self.renderer = None
@@ -17,7 +25,7 @@ class MuJoCoVisualizer:
         self.render_size = render_size
         self.camera = "fixed"
 
-    def set_camera(self, camera_name):
+    def set_camera(self, camera_name: str):
         self.camera = camera_name
 
     def set_xml_path(self, xml_path: Path):
@@ -35,7 +43,7 @@ class MuJoCoVisualizer:
         with data_path.open("r") as fp:
             self.data = json.load(fp)
 
-    def visualize(self, save_video_path, dt, data=None):
+    def visualize(self, save_video_path: Path, dt: float, data: Dict = None):
         frames = []
         num_steps_per_frame = int(1 / self.render_fps / dt)
         for i, data_step in tqdm.tqdm(enumerate(self.data)):
@@ -49,7 +57,11 @@ class MuJoCoVisualizer:
 
         self.save_video(save_video_path, frames)
 
-    def visualize_from_ext_data(self, xml_path, data_path, dt, video_path):
+    def visualize_from_ext_data(self,
+                                xml_path: Path,
+                                data_path: Path,
+                                dt: float,
+                                video_path: Path):
         self.mjc_model = self._load_model_from_xml(xml_path)
         self.mjc_data = mujoco.MjData(self.mjc_model)
         self.renderer = mujoco.Renderer(self.mjc_model, self.render_size[0], self.render_size[1])
@@ -73,7 +85,7 @@ class MuJoCoVisualizer:
 
         video_writer.release()
 
-    def take_snap_shot(self, t, pos, camera_view=None):
+    def take_snap_shot(self, t: float, pos: np.array, camera_view: str = None):
         self.mjc_data.time = t
         self.mjc_data.qpos = pos
 

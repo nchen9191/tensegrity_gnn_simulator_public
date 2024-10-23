@@ -143,7 +143,7 @@ class PID(BaseStateObject):
                              + self.k_i * self.cum_error[~low_error]
                              + self.k_d * d_error[~low_error])
         except:
-            mn = 0
+            ignore = 0
 
         u = torch.clip(u, min=-1, max=1)
 

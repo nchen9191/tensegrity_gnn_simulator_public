@@ -1,12 +1,10 @@
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Tuple
 
 import torch
 from torch import nn
 from torch.nn.modules.module import T
 from torch_geometric.data import Data as GraphData
 from torch_geometric.nn import MessagePassing
-
-from utilities.tensor_utils import zeros
 
 
 def build_mlp(
@@ -15,7 +13,15 @@ def build_mlp(
         output_size: int = None,
         output_activation: nn.Module = nn.Identity,
         activation: nn.Module = nn.ReLU) -> nn.Module:
-    """Build a MultiLayer Perceptron.
+    """
+    Method to build MLP
+
+    @param input_size: size of input
+    @param hidden_layer_sizes: list of hidden layer sizes
+    @param output_size: size of output
+    @param output_activation: activation function specific for output
+    @param activation: activation for all other layers
+    @return: mlp object
     """
     # Size of each layer
     layer_sizes = [input_size] + hidden_layer_sizes
@@ -42,20 +48,35 @@ def build_mlp(
 
 class Encoder(nn.Module):
 
-    def __init__(
-            self,
-            n_out: int,
-            nmlp_layers: int,
-            mlp_hidden_dim: int,
-            node_types: Dict[str, int],
-            edge_types: Dict[str, int]
-    ):
+    def __init__(self,
+                 n_out: int,
+                 nmlp_layers: int,
+                 mlp_hidden_dim: int,
+                 node_types: Dict[str, int],
+                 edge_types: Dict[str, int]):
+        """
+        Encoder to take features to a higher dimensional space
+
+        @param n_out: output size of encoder
+        @param nmlp_layers: number of mlp layers
+        @param mlp_hidden_dim: dim of hidden layers in mlp
+        @param node_types: dictionary of node types and their input sizes
+        @param edge_types: dictionary of edge types and their input sizes
+        """
+
         def mlp(in_feats):
-            return nn.Sequential(*[build_mlp(in_feats,
-                                             [mlp_hidden_dim
-                                              for _ in range(nmlp_layers)],
-                                             n_out),
-                                   nn.LayerNorm(n_out)])
+            """
+            method to quickly augment mlp with LayerNorm as last layer
+            @param in_feats:
+            @return:
+            """
+            return nn.Sequential(
+                *[build_mlp(in_feats,
+                            [mlp_hidden_dim
+                             for _ in range(nmlp_layers)],
+                            n_out),
+                  nn.LayerNorm(n_out)]
+            )
 
         super().__init__()
         self.edge_encoding_len = n_out
@@ -80,14 +101,15 @@ class Encoder(nn.Module):
 
         return self
 
-    def forward(self,
-                graph: GraphData):
+    def forward(self, graph: GraphData) -> GraphData:
         edge_type = graph.edge_type.flatten()
 
+        # Encode node features
         for node_name, n in self.enum_node_types.items():
             encoded = self.node_encoders[node_name](graph[node_name + '_x'])
             graph[node_name + '_x'] = encoded
 
+        # Encode edge features
         for edge_name, n in self.enum_edge_types.items():
             encoded = self.edge_encoders[edge_name](graph[edge_name + "_edge_attr"])
             graph[edge_name + "_edge_attr"] = encoded
@@ -108,21 +130,32 @@ class BaseInteractionNetwork(MessagePassing):
             mlp_hidden_dim: int,
     ):
         """
+        Base interaction network that does message passing on the lower level
+
+        @param nnode_in: input node feat size
+        @param nedge_in: input edge feat size
+        @param n_out: output size
+        @param nmlp_layers: number of mlp layers
+        @param mlp_hidden_dim: size of hidden layers
         """
         # Aggregate features from neighbors
         super().__init__(aggr='add')
         # Edge MLP
-        self.msg_fn = nn.Sequential(*[build_mlp(nnode_in + nnode_in + nedge_in,
-                                                [mlp_hidden_dim
-                                                 for _ in range(nmlp_layers)],
-                                                n_out),
-                                      nn.LayerNorm(n_out)])
+        self.msg_fn = nn.Sequential(
+            *[build_mlp(nnode_in + nnode_in + nedge_in,
+                        [mlp_hidden_dim
+                         for _ in range(nmlp_layers)],
+                        n_out),
+              nn.LayerNorm(n_out)]
+        )
 
-        self.update_fn = nn.Sequential(*[build_mlp(nnode_in + nnode_in + nedge_in,
-                                                   [mlp_hidden_dim
-                                                    for _ in range(nmlp_layers)],
-                                                   n_out),
-                                         nn.LayerNorm(n_out)])
+        self.update_fn = nn.Sequential(
+            *[build_mlp(nnode_in + nnode_in + nedge_in,
+                        [mlp_hidden_dim
+                         for _ in range(nmlp_layers)],
+                        n_out),
+              nn.LayerNorm(n_out)]
+        )
 
     def double(self: T) -> T:
         super().double()
@@ -131,22 +164,54 @@ class BaseInteractionNetwork(MessagePassing):
 
         return self
 
-    def forward(self, x, edge_index, edge_attr) -> Any:
-        x_prop, edges_prop = self.propagate(x=x,
-                                            edge_index=edge_index,
-                                            edge_attr=edge_attr)
+    def forward(self,
+                x: torch.Tensor,
+                edge_index: torch.Tensor,
+                edge_attr: torch.Tensor
+                ) -> torch.Tensor:
+        """
+        Forward pass of model
+
+        @param x: node feats
+        @param edge_index: edge indices
+        @param edge_attr: edge feats
+        @return: updated node feats
+        """
+        x_prop, edges_prop = self.propagate(
+            x=x,
+            edge_index=edge_index,
+            edge_attr=edge_attr
+        )
 
         return x_prop
 
-    def message(self, x_i, x_j, edge_attr):
+    def message(self,
+                x_i: torch.Tensor,
+                x_j: torch.Tensor,
+                edge_attr: torch.Tensor
+                ) -> torch.Tensor:
+        """
+        Message passing step
+        @param x_i: node feats of one end of edges
+        @param x_j: node feats of other end of edges
+        @param edge_attr: edge feats
+        @return: updated edges
+        """
         concat_vec = torch.concat([x_i, x_j, edge_attr], dim=1)
         msg = self.msg_fn(concat_vec)
 
         edge_attr[:] += msg
 
-        return msg
+        return edge_attr
 
-    def update(self, x_updated, x, edge_attr):
+    def update(self,
+               x_updated: torch.Tensor,
+               x: torch.Tensor,
+               edge_attr: torch.Tensor
+               ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Do nothing
+        """
         return x_updated, edge_attr
 
 
@@ -161,14 +226,15 @@ class InteractionNetwork(nn.Module):
             mlp_hidden_dim: int,
             edge_types: List[str]
     ):
-        """InteractionNetwork derived from torch_geometric MessagePassing class
-        Args:
-          nnode_in: Number of node inputs (latent dimension of size 128).
-          nnode_out: Number of node outputs (latent dimension of size 128).
-          nedge_in: Number of edge inputs (latent dimension of size 128).
-          nedge_out: Number of edge output features (latent dimension of size 128).
-          nmlp_layer: Number of hidden layers in the MLP (typically of size 2).
-          mlp_hidden_dim: Size of the hidden layer (latent dimension of size 128).
+        """
+        Interaction network that does message passing on the higher level
+
+        @param nnode_in: node input feature vector size
+        @param nedge_in: edge input feature vector size
+        @param n_out: output size
+        @param nmlp_layers: number of mlp layers
+        @param mlp_hidden_dim: size of hidden layers
+        @param edge_types: edge types in graph
         """
         # Aggregate features from neighbors
         super().__init__()
@@ -203,7 +269,13 @@ class InteractionNetwork(nn.Module):
 
         return self
 
-    def forward(self, graph):
+    def forward(self, graph: GraphData) -> GraphData:
+        """
+        forward pass
+
+        @param graph: batch graph data
+        @return: updated graph
+        """
         agg_xs = []
         for name, mp in self.mp_dict.items():
             edge_attr = graph[name + "_edge_attr"]
@@ -211,7 +283,8 @@ class InteractionNetwork(nn.Module):
             agg_x = mp(graph.node_x, edge_idx, edge_attr)
             agg_xs.append(agg_x)
 
-        concat_vec = torch.hstack([graph.node_x, torch.hstack(agg_xs)])
+        agg_xs = torch.stack(agg_xs, dim=2).sum(dim=2)
+        concat_vec = torch.hstack([graph.node_x, agg_xs])
         graph['node_x'] = graph.node_x + self.update_fn(concat_vec)
 
         return graph
@@ -230,6 +303,17 @@ class Processor(MessagePassing):
             edge_types: List[str],
             processor_shared_weights: bool = False,
     ):
+        """
+        Processor containing multiple interaction networks
+
+        @param nnode_in: node input feature vector size
+        @param nedge_in: edge input feature vector size
+        @param n_out: output size
+        @param nmlp_layers: number of mlp layers
+        @param mlp_hidden_dim: size of hidden layers
+        @param edge_types: edge types in graph
+        @param processor_shared_weights: flag to have shared or sep weights per interaction network
+        """
         def interaction_network():
             return InteractionNetwork(
                 nnode_in=nnode_in,
@@ -262,14 +346,18 @@ class Processor(MessagePassing):
 
         return self
 
-    def forward(self,
-                graph_batch: GraphData):
+    def forward(self, graph_batch: GraphData) -> GraphData:
         """
+        Forward pass
+
+        @param graph_batch: graph data
+        @return: message passed graph
         """
         for i in range(self.num_msg_passes):
             graph_batch = self.gnn_stacks(graph_batch) \
                 if self.shared_weights \
                 else self.gnn_stacks[i](graph_batch)
+
         return graph_batch
 
 
@@ -280,16 +368,33 @@ class Decoder(nn.Module):
             nnode_out: int,
             nmlp_layers: int,
             mlp_hidden_dim: int):
+        """
+        Decoder that maps node latent vectors to normalized dv
+
+        @param nnode_in: node input feature vector size
+        @param nedge_in: edge input feature vector size
+        @param nmlp_layers: number of mlp layers
+        @param mlp_hidden_dim: size of hidden layers
+        """
         super().__init__()
         self.node_decode_fn = build_mlp(
-            nnode_in, [mlp_hidden_dim for _ in range(nmlp_layers)], nnode_out)
+            nnode_in,
+            [mlp_hidden_dim for _ in range(nmlp_layers)],
+            nnode_out
+        )
 
     def double(self: T) -> T:
         super().double()
         self.node_decode_fn = self.node_decode_fn.double()
         return self
 
-    def forward(self, graph_batch: GraphData):
+    def forward(self, graph_batch: GraphData) -> GraphData:
+        """
+        forward pass
+
+        @param graph_batch: graph data
+        @return: decoded graph data
+        """
         graph_batch['decode_output'] = self.node_decode_fn(graph_batch.node_x)
 
         return graph_batch
@@ -308,6 +413,18 @@ class EncodeProcessDecode(nn.Module):
             mlp_hidden_dim: int,
             processor_shared_weights: bool = False
     ):
+        """
+        GNN class
+
+        @param node_types: dictionary of node types to input vec size
+        @param edge_types: dictionary of edge types to input vec size
+        @param n_out: output size
+        @param latent_dim: latent dim size
+        @param nmessage_passing_steps: number of msg passing steps
+        @param nmlp_layers: number of mlp layers per mlp
+        @param mlp_hidden_dim: hidden dim size
+        @param processor_shared_weights: flag for shared or sep weights for interaction networks
+        """
         super().__init__()
         self._encoder = Encoder(
             n_out=latent_dim,
@@ -344,6 +461,10 @@ class EncodeProcessDecode(nn.Module):
     def forward(self,
                 graph_batch: GraphData):
         """
+        forward pass
+
+        @param graph_batch: graph data
+        @return: GNN processed graph data
         """
         graph_batch = self._encoder(graph_batch)
         graph_batch = self._processor(graph_batch)

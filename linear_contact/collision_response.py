@@ -1,7 +1,7 @@
 import torch
 from torch.linalg import vecdot, matmul, cross, norm
 
-from contact.collision_detector import *
+from linear_contact.collision_detector import *
 from state_objects.base_state_object import BaseStateObject
 from state_objects.primitive_shapes import Ground
 from utilities import torch_quaternion
