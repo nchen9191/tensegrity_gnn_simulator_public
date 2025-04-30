@@ -28,9 +28,11 @@ def train():
         config_file['optimizer_params']['lr'] = lr
         config_file['load_sim'] = load
         config_file['batch_size'] = batch_size
+        config_file['eval_step'] = eval_step
 
-        trainer = TensegrityGNNTrainingEngine(config_file, torch.nn.MSELoss(), 0.01)
-        trainer.EVAL_STEPSIZE = eval_step
+        trainer = TensegrityGNNTrainingEngine(config_file,
+                                              torch.nn.MSELoss(),
+                                              0.01)
 
         trainer.to('cuda')
         trainer.run(e)

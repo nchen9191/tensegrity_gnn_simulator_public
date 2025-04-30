@@ -266,7 +266,7 @@ class TensegrityRobot(BaseStateObject):
 
         return net_rod_forces, rod_forces, act_pts
 
-    def compute_cable_length(self, cable: Cablee):
+    def compute_cable_length(self, cable: Cable):
         end_pt0 = self.system_topology.sites_dict[cable.end_pts[0]]
         end_pt1 = self.system_topology.sites_dict[cable.end_pts[1]]
 

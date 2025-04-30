@@ -20,6 +20,9 @@ from utilities.tensor_utils import zeros
 
 
 class TensegrityGNNTrainingEngine(BaseStateObject):
+    """
+    Training engine for Tensegrity GNN model
+    """
 
     def __init__(self,
                  training_config: Dict,
@@ -32,11 +35,13 @@ class TensegrityGNNTrainingEngine(BaseStateObject):
                 self.sim_config = json.load(j)
 
         self.config = training_config
-        self.simulator = self.get_dummy_simulator()
-        self.num_steps_fwd = training_config['num_steps_fwd']
-        self.num_hist = training_config['num_hist']
-        self.dt = dt
-        self.max_batch_size = training_config['batch_size']
+        self.simulator = self.get_dummy_simulator()  # need for robot properties to initialize data
+        self.num_steps_fwd = training_config['num_steps_fwd']  # length of training trajectory
+        self.num_hist = training_config['num_hist']  # length of history
+        self.dt = dt  # timestep size
+        self.max_batch_size = training_config['batch_size']  # batch size
+
+        # Used for loading previously trained simulators
         self.load_sim = training_config['load_sim'] \
             if 'load_sim' in training_config else False
         self.load_sim_path = training_config['load_sim_path'] \
@@ -45,17 +50,19 @@ class TensegrityGNNTrainingEngine(BaseStateObject):
         self.output_dir = training_config['output_path']
         Path(self.output_dir).mkdir(exist_ok=True)
 
+        # Initialize constants used for training and saving model
         self.best_val_loss = 1e20
         self.best_rollout_loss = 1e20
         self.best_train_loss = 1e20
         self.num_no_improve = 0
-        self.EVAL_STEPSIZE = 20
+        self.EVAL_STEPSIZE = training_config['eval_step']
         self.MAX_NO_IMPROVE = 10
         self.PRINT_STEP = 100
 
-        save_code_flag = (self.config['num_steps_fwd'] == 1
-                          and not self.config['load_sim'])
-        self.save_code(save_code_flag)
+        if self.num_steps_fwd == 1 and not self.load_sim:
+            self.save_code()
+
+        # Precompute batches
         self.train_data_dict, self.train_batches = (
             self.init_data(training_config['train_data_paths']))
         self.val_data_dict, self.val_batches = (
@@ -64,6 +71,7 @@ class TensegrityGNNTrainingEngine(BaseStateObject):
         delattr(self, "simulator")
         self.simulator = self.get_simulator()
 
+        # Initialize training specific params and objects
         self.trainable_params = torch.nn.ParameterList(self.simulator.parameters())
         self.optimizer = torch.optim.Adam(
             self.parameters(),
@@ -77,12 +85,14 @@ class TensegrityGNNTrainingEngine(BaseStateObject):
 
         return self
 
-    def save_code(self, save_code_flag=True):
-        if save_code_flag:
-            code_dir_name = "tensegrity_physics_engine"
-            curr_code_dir = os.getcwd()
-            code_output = Path(self.output_dir, code_dir_name)
-            save_curr_code(curr_code_dir, code_output)
+    def save_code(self):
+        """
+        Save snapshot of code in the beginning of training for ease of running and reproducing results
+        """
+        code_dir_name = "tensegrity_physics_engine"
+        curr_code_dir = os.getcwd()
+        code_output = Path(self.output_dir, code_dir_name)
+        save_curr_code(curr_code_dir, code_output)
 
     def get_dummy_simulator(self):
         sim = Tensegrity5dRobotSimulator(self.sim_config['tensegrity_cfg'],
@@ -91,6 +101,9 @@ class TensegrityGNNTrainingEngine(BaseStateObject):
         return sim
 
     def get_simulator(self):
+        """
+        Loads or initializes simulator
+        """
         if self.load_sim and self.load_sim_path:
             sim = torch.load(self.load_sim_path, map_location="cpu")
             sim.reset_actuation()
@@ -103,6 +116,12 @@ class TensegrityGNNTrainingEngine(BaseStateObject):
         return sim
 
     def init_data(self, data_paths):
+        """
+        Initializes and precompute useful data objects and batches
+
+        @param data_paths: paths to different trajectories
+        @return: data dict and pre-computed batches
+        """
         data_dict = {}
         data_dict['names'] = [p.split("/")[-2] for p in data_paths]
 
@@ -140,6 +159,11 @@ class TensegrityGNNTrainingEngine(BaseStateObject):
         return data_dict, batches
 
     def _get_endpts(self, data_jsons):
+        """
+        Method to extract rod end pts from data jsons
+        @param data_jsons: trajectory data dicts
+        @return: list of list of list of end pt tensors
+        """
         with torch.no_grad():
             data_end_pts = []
             for data_json in data_jsons:
@@ -152,6 +176,12 @@ class TensegrityGNNTrainingEngine(BaseStateObject):
         return data_end_pts
 
     def load_json_files(self, paths):
+        """
+        Load relevant files from trajectory paths
+
+        @param paths: paths to trajectory data
+        @return: list of data jsons, list of target gaits, list of extra state infos
+        """
         data_jsons, target_gait_jsons, extra_state_infos = [], [], []
         for path in paths:
             with Path(path, "processed_data.json").open('r') as fp:
@@ -170,6 +200,14 @@ class TensegrityGNNTrainingEngine(BaseStateObject):
         return data_jsons, target_gait_jsons, extra_state_infos
 
     def data_to_pos_quat_ctrls(self, data_jsons, gt_end_pts, extra_state_jsons):
+        """
+        Method to parse data jsons and compute rod poses and ctrls
+
+        @param data_jsons: Jsons of trajectory data
+        @param gt_end_pts: ground truth end pts
+        @param extra_state_jsons: Loaded extra state jsons
+        @return: List of pos, list of quats, and list of ctrls
+        """
         data_pos, data_quats, data_controls = [], [], []
         for i, data_json in enumerate(data_jsons):
             pos, quats, controls = [], [], []
@@ -198,6 +236,16 @@ class TensegrityGNNTrainingEngine(BaseStateObject):
         return data_pos, data_quats, data_controls
 
     def pos_quat_to_states(self, data_pos, data_quats, times, data_vels):
+        """
+        Method to combine pos and quat to SE(3) states
+
+        @param data_pos: List of pos
+        @param data_quats: List of quats
+        @param times: time diff between subsequent data pts
+        @param data_vels: list of vels
+
+        @return: List of states
+        """
         num_rods = len(self.simulator.robot.rods)
 
         data_states = []
@@ -753,7 +801,7 @@ class TensegrityGNNTrainingEngine(BaseStateObject):
 
         loss_file = Path(self.output_dir, "loss.txt")
         loss_msg = (f'Epoch {epoch_num}, '
-                    f'"Train/Val/Val KF Losses": {losses}')
+                    f'"Train/Val/Val Rollout Losses": {losses}')
 
         try:
             with loss_file.open('a') as fp:

@@ -11,7 +11,7 @@ import tqdm
 
 class MuJoCoVisualizer:
 
-    def __init__(self, render_fps: int = 30, render_size: (int, int) = (1280, 1280)):
+    def __init__(self, render_fps: int = 50, render_size: (int, int) = (720, 720)):
         """
 
         @param render_fps:
@@ -23,7 +23,7 @@ class MuJoCoVisualizer:
         self.data = {}
         self.render_fps = render_fps
         self.render_size = render_size
-        self.camera = "fixed"
+        self.camera = "camera"
 
     def set_camera(self, camera_name: str):
         self.camera = camera_name
@@ -43,11 +43,10 @@ class MuJoCoVisualizer:
         with data_path.open("r") as fp:
             self.data = json.load(fp)
 
-    def visualize(self, save_video_path: Path, dt: float, data: Dict = None):
+    def visualize(self, save_video_path: Path, dt: float):
         frames = []
         num_steps_per_frame = int(1 / self.render_fps / dt)
         for i, data_step in tqdm.tqdm(enumerate(self.data)):
-            # if True:
             if i % num_steps_per_frame == 0:
                 frame = self.take_snap_shot(data_step['time'],
                                             data_step['pos'])
@@ -71,7 +70,7 @@ class MuJoCoVisualizer:
 
     def render_frame(self):
         self.renderer.update_scene(self.mjc_data, self.camera)
-        frame = self.renderer.render()
+        frame = self.renderer.render().copy()
         return frame
 
     def save_video(self, save_path: Path, frames: list):

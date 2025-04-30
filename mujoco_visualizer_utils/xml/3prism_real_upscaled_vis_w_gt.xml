@@ -57,15 +57,7 @@
 <!--         top camera-->
 <!--                <camera name="camera" pos="0 -2 20" axisangle="1 0 0 10"/>-->
         <!--         side camera-->
-        <camera name="camera1" pos="-0.010 -1.874 90.430" xyaxes="1.000 -0.006 0.000 0.006 1.000 0.021"/>
-        <camera name="camera" pos="-1.707 2.267 19.089" xyaxes="1.000 -0.009 -0.000 0.009 1.000 0.00"/>
-<!--        <camera name="camera" pos="2.404 -17.028 6.563" xyaxes="0.990 0.140 -0.000 -0.050 0.353 0.934"/>-->
-<!--        <camera name="camera" pos="-1.707 -9.267 38.018" xyaxes="0.994 -0.113 -0.000 0.111 0.970 0.218"/>         -->
-        <camera name="cw_19_camera" pos="5.362 2.793 14.484" xyaxes="1.000 -0.000 0.000 0.000 1.000 0.00"/>
-        <camera name="crawling_6_camera" pos="5.362 2.793 14.484" xyaxes="1.000 -0.000 0.000 0.000 1.000 0.00"/>
-
-<!--        <camera name="front" pos="4.386 -26.633 14.007" xyaxes="0.988 0.152 0.000 -0.063 0.408 0.911"/>-->
-<!--        <camera name="front" pos="6.600 -17.237 7.341" xyaxes="0.916 0.402 -0.000 -0.110 0.251 0.962"/>-->
+        <camera name="camera" pos="-1.707 0.267 29.089" xyaxes="1.000 -0.009 -0.000 0.009 1.000 0.00"/>
         <camera name="front" pos="3.738 -12.241 4.847" xyaxes="0.960 0.281 0.000 -0.076 0.259 0.963"/>
         <camera name="front_far" pos="-7.221 -32.763 14.604" xyaxes="1.000 0.015 -0.000 -0.004 0.253 0.968"/>
 

@@ -2,10 +2,10 @@
   "gravity": [0.0, 0.0, -9.81],
   "processor_shared_weights": false,
   "n_out": 3,
-  "latent_dim": 256,
+  "latent_dim": 128,
   "nmessage_passing_steps": 4,
   "nmlp_layers": 2,
-  "mlp_hidden_dim": 256,
+  "mlp_hidden_dim": 128,
   "tensegrity_cfg": {
     "name": "3bar",
     "rods": [

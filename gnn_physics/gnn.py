@@ -202,7 +202,7 @@ class BaseInteractionNetwork(MessagePassing):
 
         edge_attr[:] += msg
 
-        return edge_attr
+        return msg
 
     def update(self,
                x_updated: torch.Tensor,
@@ -241,7 +241,7 @@ class InteractionNetwork(nn.Module):
 
         # Node MLP
         self.update_fn = nn.Sequential(*[
-            build_mlp(nnode_in + len(edge_types) * n_out,
+            build_mlp(nnode_in + n_out,
                       [mlp_hidden_dim for _ in range(nmlp_layers)],
                       n_out),
             nn.LayerNorm(n_out)
